@@ -15,9 +15,11 @@ categories:
   - infosec
 tag:
     - SeBackup
+    - RPC
     - Active Directory
     - Bloodhound
     - ForceChangePassword
+    - evil-winrm
 ---
 
 ![](/assets/img/blackfield/cover-blackfield.png)

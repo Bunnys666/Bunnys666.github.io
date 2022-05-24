@@ -52,8 +52,9 @@ body {
     margin-top: 1em;
     margin-left: 0;
     margin-right: 0;
-    width: 100%;
+    width: 105%;
     clear: both;
+  
 
     .page__content,
     .page__meta,
@@ -64,6 +65,7 @@ body {
       margin-right: 0;
       width: 100%;
       clear: both;
+      text-align: justify;
     }
   }
 }
@@ -507,10 +509,11 @@ body {
 }
 
 /*
-   Related
+  Related
    ========================================================================== */
 
 .page__related {
+  display: none;
   @include clearfix();
   float: left;
   margin-top: 2em;
