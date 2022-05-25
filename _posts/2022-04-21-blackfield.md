@@ -58,7 +58,7 @@ Host script results:
 |_  start_date: N/A
 ```
 
-## Reconaissance
+## Reconnaissance
 
 Doing ldap enumeration doesn't show me the way, so i keep move onto RPC service.
 Sucessfully login anonymously on RPC, but we cannot use command such as `enumdomusers`,`enumdomains`.

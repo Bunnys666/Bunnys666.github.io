@@ -32,8 +32,8 @@ _site
 .github/
 
 #draft
-_drafts
+_drafts/
 
 # folder
-docs
-test
+docs/
+test/
