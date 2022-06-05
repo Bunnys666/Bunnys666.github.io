@@ -13,6 +13,7 @@ group :jekyll_plugins do
     gem "minimal-mistakes-jekyll"
     gem 'jekyll-postfiles'
     gem "bcrypt"
+    gem 'jemoji'
 end
 gem "tzinfo-data"
 gem "wdm", "~> 0.1.0" if Gem.win_platform?

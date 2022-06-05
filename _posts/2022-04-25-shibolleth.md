@@ -37,7 +37,7 @@ exploiting this service a root shell is gained.
 
 ## Portscan
 
-```bash
+```powershell
 PORT   STATE SERVICE
 80/tcp open  http
 |_http-title: Did not follow redirect to http://shibboleth.htb/
