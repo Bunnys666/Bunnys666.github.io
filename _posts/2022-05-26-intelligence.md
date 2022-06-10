@@ -27,6 +27,8 @@ tag:
     - Kerberoasting
     - TGT
     - GMSA
+toc: true
+toc_sticky: true
 ---
 ![](/assets/img/intelligence/cover.png)
 
