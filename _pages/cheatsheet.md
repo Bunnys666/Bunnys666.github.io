@@ -1,5 +1,5 @@
 ---
-title: "cheatsheets"
+title: "Cheatsheets"
 layout: categories
 permalink: /cheatsheet/
 ---
